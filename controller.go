@@ -28,20 +28,20 @@ var ratZero = new(big.Rat).SetInt64(0)
 type Controller struct {
 	// P is the proportional gain
 	P *big.Rat
-	// I is integral gain
+	// I is integral reset
 	I *big.Rat
-	// D is the derivative gain
+	// D is the derivative term
 	D *big.Rat
 	// current setpoint
 	Setpoint *big.Rat
 	// Min the lowest value acceptable for the Output
 	Min *big.Rat
-	// Max the lowest value acceptable for the Output
+	// Max the highest value acceptable for the Output
 	Max *big.Rat
 
-	prevValue *big.Rat
-	integral  *big.Rat
-	initOnce  sync.Once
+	prevProcessVariable *big.Rat
+	accumulatedIntegral *big.Rat
+	initOnce            sync.Once
 }
 
 func (p *Controller) init() {
@@ -58,59 +58,63 @@ func (p *Controller) init() {
 		if p.Setpoint == nil {
 			p.Setpoint = new(big.Rat).SetInt64(0)
 		}
-		if p.prevValue == nil {
-			p.prevValue = new(big.Rat).SetInt64(0)
+		if p.prevProcessVariable == nil {
+			p.prevProcessVariable = new(big.Rat).SetInt64(0)
 		}
-		if p.integral == nil {
-			p.integral = new(big.Rat).SetInt64(0)
+		if p.accumulatedIntegral == nil {
+			p.accumulatedIntegral = new(big.Rat).SetInt64(0)
 		}
 	})
 }
 
 // Accumulate updates the controller with the given value and duration since the
-// last update. It returns the new output.
+// last update. It returns the new output that should be used by the device to
+// reach the desired set point.
 func (p *Controller) Accumulate(v *big.Rat, duration time.Duration) *big.Rat {
 	p.init()
 	var (
-		value      = v.Set(v)
-		dt         = new(big.Rat)
-		err        = new(big.Rat)
-		integral   = new(big.Rat)
-		derivative = new(big.Rat)
-		output     = new(big.Rat)
-		prevValue  *big.Rat
+		processVariable     = v.Set(v)
+		dt                  = new(big.Rat)
+		err                 = new(big.Rat)
+		proportional        = new(big.Rat)
+		integral            = new(big.Rat)
+		derivative          = new(big.Rat)
+		output              = new(big.Rat)
+		prevProcessVariable *big.Rat
 	)
-	prevValue, p.prevValue = p.prevValue, value
-
+	prevProcessVariable, p.prevProcessVariable = p.prevProcessVariable, processVariable
 	dt.SetInt64(int64(duration / time.Second))
-	err.Sub(p.Setpoint, value)
+	err.Sub(p.Setpoint, processVariable)
+
+	// Proportional Gain
+	proportional.Mul(p.P, err)
+	output.Add(output, proportional)
+
+	// Integral Reset
 	integral.
 		Mul(err, dt).
 		Mul(integral, p.I).
-		Add(integral, p.integral)
-	p.integral = integral
-	if p.Max != nil && p.integral.Cmp(p.Max) > 0 {
-		p.integral = p.Max
-	} else if p.Min != nil && p.integral.Cmp(p.Min) < 0 {
-		p.integral = p.Min
-	}
+		Add(integral, p.accumulatedIntegral)
+	p.accumulatedIntegral = p.enforceRange(integral) // avoid integral windup
+	output.Add(output, p.accumulatedIntegral)
 
+	// Derivative Term
 	if dt.Cmp(ratZero) > 0 {
-		derivative.Sub(value, prevValue)
+		derivative.Sub(processVariable, prevProcessVariable)
 		derivative.Quo(derivative, dt)
 		derivative.Neg(derivative)
 	}
+	derivative.Mul(derivative, p.D)
+	output.Add(output, derivative)
 
-	output.
-		Add(output, err.Mul(p.P, err)).
-		Add(output, p.integral).
-		Add(output, derivative.Mul(derivative, p.D))
+	return p.enforceRange(output)
+}
 
-	if p.Max != nil && output.Cmp(p.Max) > 0 {
-		output = p.Max
-	} else if p.Min != nil && output.Cmp(p.Min) < 0 {
-		output = p.Min
+func (p *Controller) enforceRange(v *big.Rat) *big.Rat {
+	if p.Max != nil && v.Cmp(p.Max) > 0 {
+		return p.Max
+	} else if p.Min != nil && v.Cmp(p.Min) < 0 {
+		return p.Min
 	}
-
-	return output
+	return v
 }
