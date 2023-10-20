@@ -2,7 +2,6 @@
 
 [![GoDoc](https://godoc.org/cirello.io/pidctl?status.svg)](https://godoc.org/cirello.io/pidctl)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cirello-io/pidctl)](https://goreportcard.com/report/github.com/cirello-io/pidctl)
-[![SLA](https://img.shields.io/badge/SLA-95%25-brightgreen.svg)](https://github.com/cirello-io/public/blob/master/SLA.md)
 
 A [PIDController](http://en.wikipedia.org/wiki/PID_controller) implementation in Go.
 
