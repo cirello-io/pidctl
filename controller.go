@@ -32,7 +32,7 @@ type Controller struct {
 	I *big.Rat
 	// D is the derivative term
 	D *big.Rat
-	// current setpoint
+	// Setpoint is the chased target
 	Setpoint *big.Rat
 	// Min the lowest value acceptable for the Output
 	Min *big.Rat
@@ -67,13 +67,21 @@ func (p *Controller) init() {
 	})
 }
 
-// Accumulate updates the controller with the given value and duration since the
-// last update. It returns the new output that should be used by the device to
-// reach the desired set point.
-func (p *Controller) Accumulate(v *big.Rat, duration time.Duration) *big.Rat {
+// Accumulate updates the controller with the given process value since the last
+// update. It returns the new output that should be used by the device to reach
+// the desired set point. Internally it assumes the duration between calls is
+// constant.
+func (p *Controller) Compute(pv *big.Rat) *big.Rat {
+	return p.Accumulate(pv, time.Second)
+}
+
+// Accumulate updates the controller with the given process value and duration
+// since the last update. It returns the new output that should be used by the
+// device to reach the desired set point.
+func (p *Controller) Accumulate(pv *big.Rat, deltaTime time.Duration) *big.Rat {
 	p.init()
 	var (
-		processVariable     = v.Set(v)
+		processVariable     = pv.Set(pv)
 		dt                  = new(big.Rat)
 		err                 = new(big.Rat)
 		proportional        = new(big.Rat)
@@ -83,7 +91,7 @@ func (p *Controller) Accumulate(v *big.Rat, duration time.Duration) *big.Rat {
 		prevProcessVariable *big.Rat
 	)
 	prevProcessVariable, p.prevProcessVariable = p.prevProcessVariable, processVariable
-	dt.SetInt64(int64(duration / time.Second))
+	dt.SetInt64(int64(deltaTime / time.Second))
 	err.Sub(p.Setpoint, processVariable)
 
 	// Proportional Gain

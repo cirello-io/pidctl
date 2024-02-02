@@ -39,7 +39,7 @@ func Example() {
 	speed := float64(20) // the car starts in motion. 20mph
 	const travel = 15 * time.Second
 	for i := time.Second; i <= travel; i += time.Second {
-		desiredThrottle := car.Accumulate(new(big.Rat).SetFloat64(speed), time.Second)
+		desiredThrottle := car.Compute(new(big.Rat).SetFloat64(speed))
 		actualThrottle, _ := desiredThrottle.Float64()
 		actualThrottle = math.Ceil(actualThrottle)
 		fmt.Printf("%s speed: %.2f throttle: %.2f (desired: %s)\n", i, speed, actualThrottle, desiredThrottle.FloatString(2))
