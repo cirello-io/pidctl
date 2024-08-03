@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"math/big"
 	"testing"
 	"text/tabwriter"
 	"time"
@@ -220,8 +219,4 @@ func TestController(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ratFloat64(i float64) *big.Rat {
-	return new(big.Rat).SetFloat64(i)
 }

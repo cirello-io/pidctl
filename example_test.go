@@ -71,3 +71,46 @@ func Example() {
 	// 14s speed: 58.00 throttle: 4.00 (desired: 3.15)
 	// 15s speed: 60.00 throttle: 3.00 (desired: 2.75)
 }
+
+// A car whose PID controller is going to act to try to stabilize its
+// speed to the given setpoint (float64 version).
+func Example_float64() {
+	car := pidctl.NewControllerFloat64(
+		1.0/5, 1.0/100, 1.0/15,
+		60).          // target speed: 60 mph
+		SetMin(-0.5). // min acceleration rate: 0.5 mps
+		SetMax(5)     // max acceleration rate: 5 mps
+	speed := float64(20) // the car starts in motion. 20mph
+	const travel = 15 * time.Second
+	for i := time.Second; i <= travel; i += time.Second {
+		desiredThrottle := car.Compute(speed)
+		actualThrottle := math.Ceil(desiredThrottle)
+		fmt.Printf("%s speed: %.2f throttle: %.2f (desired: %.2f)\n", i, speed, actualThrottle, desiredThrottle)
+		speed += actualThrottle
+		switch i % 5 {
+		case 0:
+			// head wind starts strong: 2mps
+			speed -= 2
+		case 1:
+			// head wind ends weak: 1mps
+			speed -= 1
+		}
+	}
+
+	// Output:
+	// 1s speed: 20.00 throttle: 5.00 (desired: 5.00)
+	// 2s speed: 23.00 throttle: 5.00 (desired: 5.00)
+	// 3s speed: 26.00 throttle: 5.00 (desired: 5.00)
+	// 4s speed: 29.00 throttle: 5.00 (desired: 5.00)
+	// 5s speed: 32.00 throttle: 5.00 (desired: 5.00)
+	// 6s speed: 35.00 throttle: 5.00 (desired: 5.00)
+	// 7s speed: 38.00 throttle: 5.00 (desired: 5.00)
+	// 8s speed: 41.00 throttle: 5.00 (desired: 5.00)
+	// 9s speed: 44.00 throttle: 5.00 (desired: 5.00)
+	// 10s speed: 47.00 throttle: 5.00 (desired: 5.00)
+	// 11s speed: 50.00 throttle: 5.00 (desired: 4.55)
+	// 12s speed: 53.00 throttle: 5.00 (desired: 4.02)
+	// 13s speed: 56.00 throttle: 4.00 (desired: 3.46)
+	// 14s speed: 58.00 throttle: 4.00 (desired: 3.15)
+	// 15s speed: 60.00 throttle: 3.00 (desired: 2.75)
+}

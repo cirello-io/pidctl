@@ -67,7 +67,7 @@ func (p *Controller) init() {
 	})
 }
 
-// Accumulate updates the controller with the given process value since the last
+// Compute updates the controller with the given process value since the last
 // update. It returns the new output that should be used by the device to reach
 // the desired set point. Internally it assumes the duration between calls is
 // constant.
